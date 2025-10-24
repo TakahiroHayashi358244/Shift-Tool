@@ -741,6 +741,8 @@
                     exportToExcel();
                 } else if (format === 'csv') {
                     exportToCSV();
+                } else if (format === 'template') {
+                    exportToTemplate();
                 } else if (format === 'summary') {
                     exportSummary();
                 }
@@ -822,7 +824,99 @@
                 showToast('✅ Excelファイルをダウンロードしました');
             };
 
-            // CSV出力（日付横列形式）
+            // テンプレート形式エクスポート
+            const exportToTemplate = () => {
+                const wb = XLSX.utils.book_new();
+                
+                // 空のシートを作成
+                const ws_data = [];
+                
+                // 1行目: 日付（9列ごとに配置）
+                const row1 = [];
+                currentMonthData.forEach((day, dayIndex) => {
+                    const blockStart = dayIndex * 9;
+                    row1[blockStart] = ''; // A列: No.の位置は空
+                    row1[blockStart + 1] = XLSX.SSF.parse_date_code ? 
+                        XLSX.SSF.format('yyyy-mm-dd', new Date(day.date)) : day.date; // B列: 日付
+                    // 残りの列は空
+                    for (let i = 2; i < 9; i++) {
+                        row1[blockStart + i] = '';
+                    }
+                });
+                ws_data.push(row1);
+                
+                // 2行目: ヘッダー（各ブロックに繰り返し）
+                const row2 = [];
+                currentMonthData.forEach((day, dayIndex) => {
+                    const blockStart = dayIndex * 9;
+                    row2[blockStart] = 'No.';
+                    row2[blockStart + 1] = '所属';
+                    row2[blockStart + 2] = '氏名';
+                    row2[blockStart + 3] = '業務';
+                    row2[blockStart + 4] = '配置';
+                    row2[blockStart + 5] = '出勤時間';
+                    row2[blockStart + 6] = '退勤時間';
+                    row2[blockStart + 7] = 'LH';
+                    row2[blockStart + 8] = '残業';
+                });
+                ws_data.push(row2);
+                
+                // 3-13行目: 空行（テンプレートの構造に合わせて）
+                for (let i = 0; i < 11; i++) {
+                    ws_data.push([]);
+                }
+                
+                // 14行目以降: 出勤者データ
+                // 最大出勤者数を取得
+                const maxAttendees = Math.max(...currentMonthData.map(d => d.attendees.length));
+                
+                for (let attendeeIndex = 0; attendeeIndex < maxAttendees; attendeeIndex++) {
+                    const row = [];
+                    currentMonthData.forEach((day, dayIndex) => {
+                        const blockStart = dayIndex * 9;
+                        
+                        if (attendeeIndex < day.attendees.length) {
+                            const attendee = day.attendees[attendeeIndex];
+                            row[blockStart] = attendeeIndex + 1; // No.
+                            row[blockStart + 1] = attendee.company; // 所属
+                            row[blockStart + 2] = attendee.name; // 氏名
+                            row[blockStart + 3] = ''; // 業務
+                            row[blockStart + 4] = ''; // 配置
+                            row[blockStart + 5] = ''; // 出勤時間（空白）
+                            row[blockStart + 6] = ''; // 退勤時間（空白）
+                            row[blockStart + 7] = ''; // LH（計算式は入れない）
+                            row[blockStart + 8] = ''; // 残業（計算式は入れない）
+                        } else {
+                            // 出勤者がいない場合は空
+                            for (let i = 0; i < 9; i++) {
+                                row[blockStart + i] = '';
+                            }
+                        }
+                    });
+                    ws_data.push(row);
+                }
+                
+                const ws = XLSX.utils.aoa_to_sheet(ws_data);
+                
+                // 列幅設定
+                const cols = [];
+                currentMonthData.forEach(() => {
+                    cols.push({ wch: 5 });  // No.
+                    cols.push({ wch: 15 }); // 所属
+                    cols.push({ wch: 15 }); // 氏名
+                    cols.push({ wch: 10 }); // 業務
+                    cols.push({ wch: 10 }); // 配置
+                    cols.push({ wch: 10 }); // 出勤時間
+                    cols.push({ wch: 10 }); // 退勤時間
+                    cols.push({ wch: 8 });  // LH
+                    cols.push({ wch: 8 });  // 残業
+                });
+                ws['!cols'] = cols;
+                
+                XLSX.utils.book_append_sheet(wb, ws, `${currentMonth}全体シフト`);
+                XLSX.writeFile(wb, `全体シフト表_${currentMonth}.xlsx`);
+                showToast('✅ 全体シフト表をダウンロードしました');
+            };
             const exportToCSV = () => {
                 // ヘッダー行1: 日付
                 let csv = '';
@@ -1152,6 +1246,10 @@
                                 <div className="export-option" onClick={() => handleExport('csv')}>
                                     <h4>📄 CSV形式</h4>
                                     <p>日付横列・出勤者縦列形式でCSV出力</p>
+                                </div>
+                                <div className="export-option" onClick={() => handleExport('template')}>
+                                    <h4>📋 全体シフト表</h4>
+                                    <p>テンプレート形式で出勤者名を14行目から書き込み</p>
                                 </div>
                                 <div className="export-option" onClick={() => handleExport('summary')}>
                                     <h4>📊 月間サマリー</h4>
