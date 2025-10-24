@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日別出勤者管理システム</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+        
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .header h1 {
+            color: #667eea;
+            font-size: 32px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+        
+        .btn-secondary:hover {
+            background: #f0f4ff;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(17, 153, 142, 0.4);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(235, 51, 73, 0.4);
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .month-selector {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .month-tab {
+            padding: 10px 20px;
+            background: #f0f0f0;
+            border: 2px solid transparent;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .month-tab:hover {
+            background: #e0e0e0;
+        }
+        
+        .month-tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        
+        .stat-card .number {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-card .label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 968px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .calendar-section {
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .calendar-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+        
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+        
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            background: #f5f5f5;
+        }
+        
+        .calendar-day:hover {
+            background: #e0e7ff;
+            transform: scale(1.05);
+        }
+        
+        .calendar-day.selected {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+            font-weight: bold;
+        }
+        
+        .calendar-day.weekend {
+            background: #ffe0e0;
+        }
+        
+        .calendar-day.weekend.selected {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .calendar-day .date {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .calendar-day .count {
+            font-size: 11px;
+            margin-top: 2px;
+            opacity: 0.8;
+        }
+        
+        .calendar-day .weekday {
+            font-size: 10px;
+            opacity: 0.7;
+            margin-bottom: 2px;
+        }
+        
+        .attendees-section {
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            max-height: 800px;
+            overflow-y: auto;
+        }
+        
+        .attendees-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .attendees-header h2 {
+            color: #333;
+            font-size: 20px;
+        }
+        
+        .search-box {
+            margin-bottom: 20px;
+        }
+        
+        .search-box input {
+            width: 100%;
+            padding: 12px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .search-box input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .attendees-list {
+            display: grid;
+            gap: 10px;
+        }
+        
+        .attendee-card {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: #f8f9ff;
+            border-radius: 12px;
+            transition: all 0.3s;
+            border-left: 4px solid #667eea;
+        }
+        
+        .attendee-card:hover {
+            background: #e0e7ff;
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+        
+        .attendee-number {
+            width: 35px;
+            height: 35px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            margin-right: 15px;
+        }
+        
+        .attendee-info {
+            flex: 1;
+        }
+        
+        .attendee-name {
+            font-weight: bold;
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 3px;
+        }
+        
+        .attendee-company {
+            font-size: 13px;
+            color: #666;
+            display: inline-block;
+            padding: 2px 10px;
+            background: white;
+            border-radius: 12px;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .no-data svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .company-filter {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .company-tag {
+            padding: 6px 16px;
+            background: #f0f0f0;
+            border: 2px solid transparent;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+        
+        .company-tag:hover {
+            background: #e0e0e0;
+        }
+        
+        .company-tag.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .modal-header h3 {
+            color: #333;
+            font-size: 24px;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .close-btn:hover {
+            color: #333;
+        }
+        
+        .export-options {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .export-option {
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .export-option:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        
+        .export-option h4 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .export-option p {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            z-index: 2000;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+            }
+            to {
+                transform: translateX(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo, useEffect } = React;
+
+        // 初期データ
+        const initialData = [];
+
+        function App() {
+            const [allMonthsData, setAllMonthsData] = useState(() => {
+                // LocalStorageから読み込み
+                const saved = localStorage.getItem('attendanceData');
+                if (saved) {
+                    return JSON.parse(saved);
+                }
+                return {}; // 初期状態は空
+            });
+            
+            const [currentMonth, setCurrentMonth] = useState('');
+            const [selectedDate, setSelectedDate] = useState(null);
+            const [searchQuery, setSearchQuery] = useState('');
+            const [selectedCompany, setSelectedCompany] = useState('全て');
+            const [showExportModal, setShowExportModal] = useState(false);
+            const [showResetModal, setShowResetModal] = useState(false);
+            const [toast, setToast] = useState(null);
+
+            // 現在の月のデータ
+            const currentMonthData = allMonthsData[currentMonth] || [];
+
+            // LocalStorageに保存
+            useEffect(() => {
+                localStorage.setItem('attendanceData', JSON.stringify(allMonthsData));
+            }, [allMonthsData]);
+
+            // 月が空で、データがある場合は最初の月を選択
+            useEffect(() => {
+                const monthKeys = Object.keys(allMonthsData).sort().reverse();
+                if (!currentMonth && monthKeys.length > 0) {
+                    setCurrentMonth(monthKeys[0]);
+                }
+            }, [allMonthsData, currentMonth]);
+
+            // 最初の日付を選択
+            useEffect(() => {
+                if (currentMonthData.length > 0 && !selectedDate) {
+                    setSelectedDate(currentMonthData[0].date);
+                }
+            }, [currentMonth, currentMonthData]);
+
+            // ファイルインポート処理
+            const handleFileImport = (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                showToast('📂 ファイルを読み込み中...');
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        console.log('ファイル読み込み開始');
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        console.log('ワークブック読み込み完了:', workbook.SheetNames);
+                        
+                        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                        console.log('シート取得完了');
+                        
+                        // データ解析
+                        const parsedData = parseExcelData(sheet);
+                        console.log('データ解析完了:', parsedData.length, '日分');
+                        
+                        if (parsedData.length > 0) {
+                            const monthKey = parsedData[0].date.substring(0, 7); // YYYY-MM
+                            console.log('月キー:', monthKey);
+                            
+                            setAllMonthsData(prev => {
+                                const newData = {
+                                    ...prev,
+                                    [monthKey]: parsedData
+                                };
+                                console.log('新しいデータ:', Object.keys(newData));
+                                return newData;
+                            });
+                            setCurrentMonth(monthKey);
+                            setSelectedDate(parsedData[0].date);
+                            showToast('✅ ファイルをインポートしました');
+                        } else {
+                            showToast('❌ データが見つかりませんでした');
+                        }
+                    } catch (error) {
+                        console.error('エラー詳細:', error);
+                        showToast('❌ ファイルの読み込みに失敗: ' + error.message);
+                    }
+                };
+                reader.onerror = (error) => {
+                    console.error('ファイル読み込みエラー:', error);
+                    showToast('❌ ファイルの読み込みに失敗しました');
+                };
+                reader.readAsArrayBuffer(file);
+                event.target.value = '';
+            };
+
+            // Excelデータ解析
+            const parseExcelData = (sheet) => {
+                try {
+                    console.log('parseExcelData開始');
+                    const range = XLSX.utils.decode_range(sheet['!ref']);
+                    console.log('範囲:', range);
+                    
+                    // 日付の開始列を探す（F列 = 5）
+                    const startCol = 5;
+                    let dateStartRow = -1;
+                    
+                    // 2行目から日付を探す（数値または日付オブジェクト）
+                    for (let row = 1; row <= 5; row++) {
+                        const cellAddress = XLSX.utils.encode_cell({ r: row, c: startCol });
+                        const cell = sheet[cellAddress];
+                        if (cell && cell.v) {
+                            console.log(`行${row + 1}の値:`, cell.v, typeof cell.v);
+                            // 日付オブジェクト、またはExcelの日付シリアル値（40000以上の数値）
+                            if (cell.v instanceof Date || (typeof cell.v === 'number' && cell.v > 40000)) {
+                                dateStartRow = row;
+                                console.log('日付開始行:', row + 1, '行目（Excel表記）');
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (dateStartRow === -1) {
+                        console.error('日付が見つかりませんでした');
+                        return [];
+                    }
+                    
+                    // 日付を取得
+                    const dates = [];
+                    for (let col = startCol; col <= Math.min(startCol + 35, range.e.c); col++) {
+                        const cellAddress = XLSX.utils.encode_cell({ r: dateStartRow, c: col });
+                        const cell = sheet[cellAddress];
+                        
+                        if (!cell || !cell.v) continue;
+                        
+                        let jsDate = null;
+                        
+                        if (cell.v instanceof Date) {
+                            // 既にDateオブジェクト
+                            jsDate = cell.v;
+                        } else if (typeof cell.v === 'number' && cell.v > 40000) {
+                            // Excelのシリアル値を日付に変換
+                            // Excelの基準日は1900年1月1日（ただし1900年を閏年として扱うバグがある）
+                            // JavaScriptでは1970年1月1日が基準なので、その差を計算
+                            jsDate = new Date((cell.v - 25569) * 86400 * 1000);
+                        } else if (typeof cell.v === 'string' && cell.v.startsWith('=')) {
+                            // 数式の場合、前の日付+1と仮定
+                            if (dates.length > 0) {
+                                const lastDate = new Date(dates[dates.length - 1].date);
+                                lastDate.setDate(lastDate.getDate() + 1);
+                                jsDate = lastDate;
+                            }
+                        }
+                        
+                        if (jsDate) {
+                            dates.push({ col, date: jsDate });
+                        }
+                    }
+                    
+                    console.log('取得した日付数:', dates.length);
+                    if (dates.length > 0) {
+                        console.log('最初の日付:', dates[0].date.toLocaleDateString('ja-JP'));
+                        console.log('最後の日付:', dates[dates.length - 1].date.toLocaleDateString('ja-JP'));
+                    }
+                    
+                    // 従業員データを取得
+                    const employees = [];
+                    for (let row = dateStartRow + 1; row <= range.e.r; row++) {
+                        const nameCell = sheet[XLSX.utils.encode_cell({ r: row, c: 3 })]; // D列
+                        const companyCell = sheet[XLSX.utils.encode_cell({ r: row, c: 2 })]; // C列
+                        
+                        if (nameCell && nameCell.v && String(nameCell.v).trim()) {
+                            employees.push({
+                                row,
+                                company: companyCell && companyCell.v ? String(companyCell.v) : '',
+                                name: String(nameCell.v).trim()
+                            });
+                        }
+                    }
+                    
+                    console.log('従業員数:', employees.length);
+                    
+                    // 日別出勤者を集計
+                    const result = [];
+                    const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+                    
+                    dates.forEach(({ col, date }) => {
+                        const attendees = [];
+                        employees.forEach(emp => {
+                            const cellAddress = XLSX.utils.encode_cell({ r: emp.row, c: col });
+                            const cell = sheet[cellAddress];
+                            if (cell && (cell.v === '○' || cell.v === '〇')) {
+                                attendees.push({
+                                    company: emp.company,
+                                    name: emp.name
+                                });
+                            }
+                        });
+                        
+                        const year = date.getFullYear();
+                        const month = date.getMonth() + 1;
+                        const day = date.getDate();
+                        const weekday = weekdays[date.getDay()];
+                        
+                        result.push({
+                            date: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+                            dateDisplay: `${month}月${day}日`,
+                            weekday: weekday,
+                            isWeekend: date.getDay() === 0 || date.getDay() === 6,
+                            attendees: attendees,
+                            count: attendees.length
+                        });
+                    });
+                    
+                    console.log('解析結果:', result.length, '日分');
+                    if (result.length > 0) {
+                        console.log('最初の日:', result[0].date, result[0].dateDisplay, result[0].count, '名');
+                        console.log('最後の日:', result[result.length - 1].date, result[result.length - 1].dateDisplay, result[result.length - 1].count, '名');
+                    }
+                    return result;
+                } catch (error) {
+                    console.error('parseExcelDataエラー:', error);
+                    throw error;
+                }
+            };
+
+            // エクスポート処理
+            const handleExport = (format) => {
+                if (format === 'excel') {
+                    exportToExcel();
+                } else if (format === 'csv') {
+                    exportToCSV();
+                } else if (format === 'summary') {
+                    exportSummary();
+                }
+                setShowExportModal(false);
+            };
+
+            // Excel出力（日付横列、出勤者縦列形式）
+            const exportToExcel = () => {
+                const wb = XLSX.utils.book_new();
+                
+                // 最大出勤者数を取得
+                const maxAttendees = Math.max(...currentMonthData.map(d => d.attendees.length));
+                
+                // データ配列を作成
+                const ws_data = [];
+                
+                // 1行目: 日付
+                const row1 = [];
+                currentMonthData.forEach(day => {
+                    row1.push(day.dateDisplay);
+                    row1.push('');  // マージ用
+                });
+                ws_data.push(row1);
+                
+                // 2行目: 曜日
+                const row2 = [];
+                currentMonthData.forEach(day => {
+                    row2.push(day.weekday);
+                    row2.push('');  // マージ用
+                });
+                ws_data.push(row2);
+                
+                // 3行目: ヘッダー（会社名・氏名）
+                const row3 = [];
+                currentMonthData.forEach(() => {
+                    row3.push('会社名');
+                    row3.push('氏名');
+                });
+                ws_data.push(row3);
+                
+                // 4行目以降: 出勤者データ
+                for (let i = 0; i < maxAttendees; i++) {
+                    const row = [];
+                    currentMonthData.forEach(day => {
+                        if (i < day.attendees.length) {
+                            row.push(day.attendees[i].company);
+                            row.push(day.attendees[i].name);
+                        } else {
+                            row.push('');
+                            row.push('');
+                        }
+                    });
+                    ws_data.push(row);
+                }
+                
+                const ws = XLSX.utils.aoa_to_sheet(ws_data);
+                
+                // マージ設定（1行目と2行目の日付・曜日）
+                const merges = [];
+                for (let i = 0; i < currentMonthData.length; i++) {
+                    const col = i * 2;
+                    // 1行目（日付）をマージ
+                    merges.push({ s: { r: 0, c: col }, e: { r: 0, c: col + 1 } });
+                    // 2行目（曜日）をマージ
+                    merges.push({ s: { r: 1, c: col }, e: { r: 1, c: col + 1 } });
+                }
+                ws['!merges'] = merges;
+                
+                // 列幅設定
+                const cols = [];
+                for (let i = 0; i < currentMonthData.length; i++) {
+                    cols.push({ wch: 15 }); // 会社名
+                    cols.push({ wch: 15 }); // 氏名
+                }
+                ws['!cols'] = cols;
+                
+                XLSX.utils.book_append_sheet(wb, ws, '日別出勤者一覧');
+                XLSX.writeFile(wb, `日別出勤者一覧_${currentMonth}.xlsx`);
+                showToast('✅ Excelファイルをダウンロードしました');
+            };
+
+            // CSV出力（日付横列形式）
+            const exportToCSV = () => {
+                // ヘッダー行1: 日付
+                let csv = '';
+                currentMonthData.forEach(day => {
+                    csv += `${day.dateDisplay},,`;
+                });
+                csv += '\n';
+                
+                // ヘッダー行2: 曜日
+                currentMonthData.forEach(day => {
+                    csv += `${day.weekday},,`;
+                });
+                csv += '\n';
+                
+                // ヘッダー行3: 会社名・氏名
+                currentMonthData.forEach(() => {
+                    csv += '会社名,氏名,';
+                });
+                csv += '\n';
+                
+                // データ行
+                const maxAttendees = Math.max(...currentMonthData.map(d => d.attendees.length));
+                for (let i = 0; i < maxAttendees; i++) {
+                    currentMonthData.forEach(day => {
+                        if (i < day.attendees.length) {
+                            csv += `${day.attendees[i].company},${day.attendees[i].name},`;
+                        } else {
+                            csv += ',,';
+                        }
+                    });
+                    csv += '\n';
+                }
+                
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `日別出勤者一覧_${currentMonth}.csv`;
+                link.click();
+                showToast('✅ CSVファイルをダウンロードしました');
+            };
+
+            // 月間サマリー出力
+            const exportSummary = () => {
+                const ws_data = [
+                    ['月間出勤サマリー'],
+                    ['対象月', currentMonth],
+                    [],
+                    ['日付', '曜日', '出勤者数']
+                ];
+                
+                currentMonthData.forEach(day => {
+                    ws_data.push([
+                        day.dateDisplay,
+                        day.weekday,
+                        day.count
+                    ]);
+                });
+                
+                // 統計追加
+                const totalDays = currentMonthData.length;
+                const totalAttendances = currentMonthData.reduce((sum, d) => sum + d.count, 0);
+                const avgAttendance = Math.round(totalAttendances / totalDays);
+                const maxAttendance = Math.max(...currentMonthData.map(d => d.count));
+                
+                ws_data.push(
+                    [],
+                    ['統計情報'],
+                    ['営業日数', totalDays],
+                    ['総出勤延べ人数', totalAttendances],
+                    ['平均出勤者数', avgAttendance],
+                    ['最大出勤者数', maxAttendance]
+                );
+                
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet(ws_data);
+                
+                XLSX.utils.book_append_sheet(wb, ws, '月間サマリー');
+                XLSX.writeFile(wb, `月間サマリー_${currentMonth}.xlsx`);
+                showToast('✅ サマリーをダウンロードしました');
+            };
+
+            // トースト表示
+            const showToast = (message) => {
+                setToast(message);
+                setTimeout(() => setToast(null), 3000);
+            };
+
+            // データリセット
+            const handleReset = () => {
+                localStorage.removeItem('attendanceData');
+                setAllMonthsData({});
+                setCurrentMonth('');
+                setSelectedDate(null);
+                setShowResetModal(false);
+                showToast('✅ データをリセットしました');
+            };
+
+            // 選択された日のデータ
+            const selectedDayData = useMemo(() => {
+                return currentMonthData.find(d => d.date === selectedDate);
+            }, [selectedDate, currentMonthData]);
+
+            // 会社リスト
+            const companies = useMemo(() => {
+                const companySet = new Set();
+                currentMonthData.forEach(day => {
+                    day.attendees.forEach(att => {
+                        if (att.company) companySet.add(att.company);
+                    });
+                });
+                return ['全て', ...Array.from(companySet).sort()];
+            }, [currentMonthData]);
+
+            // フィルター済み出勤者
+            const filteredAttendees = useMemo(() => {
+                if (!selectedDayData) return [];
+                
+                let result = selectedDayData.attendees;
+                
+                if (selectedCompany !== '全て') {
+                    result = result.filter(att => att.company === selectedCompany);
+                }
+                
+                if (searchQuery) {
+                    const query = searchQuery.toLowerCase();
+                    result = result.filter(att => 
+                        att.name.toLowerCase().includes(query) || 
+                        att.company.toLowerCase().includes(query)
+                    );
+                }
+                
+                return result;
+            }, [selectedDayData, searchQuery, selectedCompany]);
+
+            // 統計
+            const stats = useMemo(() => {
+                if (currentMonthData.length === 0) {
+                    return { totalDays: 0, avgAttendance: 0, maxAttendance: 0 };
+                }
+                const totalDays = currentMonthData.length;
+                const totalAttendances = currentMonthData.reduce((sum, day) => sum + day.count, 0);
+                const avgAttendance = Math.round(totalAttendances / totalDays);
+                const maxAttendance = Math.max(...currentMonthData.map(d => d.count));
+                
+                return { totalDays, avgAttendance, maxAttendance };
+            }, [currentMonthData]);
+
+            // 月リスト
+            const monthKeys = Object.keys(allMonthsData).sort().reverse();
+
+            return (
+                <div className="container">
+                    <div className="header">
+                        <div className="header-top">
+                            <div>
+                                <h1>📅 日別出勤者管理システム</h1>
+                            </div>
+                            <div className="action-buttons">
+                                <a
+                                    href="https://takahirohayashi358244.github.io/monthly_calendar/"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="btn btn-secondary"
+                                    style={{textDecoration: 'none'}}
+                                >
+                                    📅 希望シフトカレンダー
+                                </a>
+                                <label className="btn btn-primary">
+                                    📁 ファイル読込
+                                    <input
+                                        type="file"
+                                        className="file-input"
+                                        accept=".xlsx,.xls"
+                                        onChange={handleFileImport}
+                                    />
+                                </label>
+                                <button
+                                    className="btn btn-success"
+                                    onClick={() => setShowExportModal(true)}
+                                >
+                                    📊 エクスポート
+                                </button>
+                                <button
+                                    className="btn btn-danger"
+                                    onClick={() => setShowResetModal(true)}
+                                >
+                                    🔄 リセット
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="month-selector">
+                            {monthKeys.length > 0 ? (
+                                monthKeys.map(month => (
+                                    <div
+                                        key={month}
+                                        className={`month-tab ${currentMonth === month ? 'active' : ''}`}
+                                        onClick={() => {
+                                            setCurrentMonth(month);
+                                            setSelectedDate(null);
+                                        }}
+                                    >
+                                        {month}
+                                    </div>
+                                ))
+                            ) : (
+                                <div style={{color: '#999', fontSize: '14px'}}>
+                                    データがありません。「ファイル読込」からExcelファイルをインポートしてください。
+                                </div>
+                            )}
+                        </div>
+                        
+                        <div className="stats">
+                            <div className="stat-card">
+                                <div className="number">{stats.totalDays}</div>
+                                <div className="label">営業日数</div>
+                            </div>
+                            <div className="stat-card">
+                                <div className="number">{stats.avgAttendance}</div>
+                                <div className="label">平均出勤者数</div>
+                            </div>
+                            <div className="stat-card">
+                                <div className="number">{stats.maxAttendance}</div>
+                                <div className="label">最大出勤者数</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {currentMonthData.length === 0 ? (
+                        <div className="no-data" style={{background: 'white', padding: '60px', borderRadius: '20px', textAlign: 'center'}}>
+                            <svg style={{width: '80px', height: '80px', margin: '0 auto 20px', opacity: '0.3'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <h2 style={{color: '#333', marginBottom: '10px'}}>データがありません</h2>
+                            <p style={{color: '#666', fontSize: '16px'}}>「📁 ファイル読込」ボタンからExcelファイルをインポートしてください</p>
+                        </div>
+                    ) : (
+                        <div className="main-content">
+                            <div className="calendar-section">
+                                <h2>📆 カレンダー</h2>
+                                <div className="calendar-grid">
+                                    {currentMonthData.map(day => (
+                                        <div
+                                            key={day.date}
+                                            className={`calendar-day ${day.isWeekend ? 'weekend' : ''} ${day.date === selectedDate ? 'selected' : ''}`}
+                                            onClick={() => setSelectedDate(day.date)}
+                                        >
+                                            <div className="weekday">{day.weekday}</div>
+                                            <div className="date">{day.dateDisplay.split('月')[1].replace('日', '')}</div>
+                                            <div className="count">{day.count}名</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="attendees-section">
+                                {selectedDayData && (
+                                    <>
+                                        <div className="attendees-header">
+                                            <h2>
+                                                {selectedDayData.dateDisplay} ({selectedDayData.weekday})
+                                            </h2>
+                                            <span className="badge">
+                                                {filteredAttendees.length}名
+                                            </span>
+                                        </div>
+
+                                        <div className="company-filter">
+                                            {companies.map(company => (
+                                                <div
+                                                    key={company}
+                                                    className={`company-tag ${selectedCompany === company ? 'active' : ''}`}
+                                                    onClick={() => setSelectedCompany(company)}
+                                                >
+                                                    {company}
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div className="search-box">
+                                            <input
+                                                type="text"
+                                                placeholder="🔍 名前または会社名で検索..."
+                                                value={searchQuery}
+                                                onChange={(e) => setSearchQuery(e.target.value)}
+                                            />
+                                        </div>
+
+                                        {filteredAttendees.length > 0 ? (
+                                            <div className="attendees-list">
+                                                {filteredAttendees.map((attendee, index) => (
+                                                    <div key={index} className="attendee-card">
+                                                        <div className="attendee-number">{index + 1}</div>
+                                                        <div className="attendee-info">
+                                                            <div className="attendee-name">{attendee.name}</div>
+                                                            <div className="attendee-company">{attendee.company}</div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="no-data">
+                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                                                </svg>
+                                                <p>該当する出勤者が見つかりませんでした</p>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* エクスポートモーダル */}
+                    <div className={`modal ${showExportModal ? 'show' : ''}`} onClick={() => setShowExportModal(false)}>
+                        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                            <div className="modal-header">
+                                <h3>📊 エクスポート</h3>
+                                <button className="close-btn" onClick={() => setShowExportModal(false)}>×</button>
+                            </div>
+                            <div className="export-options">
+                                <div className="export-option" onClick={() => handleExport('excel')}>
+                                    <h4>📗 詳細Excel</h4>
+                                    <p>日付横列・出勤者縦列形式でExcel出力</p>
+                                </div>
+                                <div className="export-option" onClick={() => handleExport('csv')}>
+                                    <h4>📄 CSV形式</h4>
+                                    <p>日付横列・出勤者縦列形式でCSV出力</p>
+                                </div>
+                                <div className="export-option" onClick={() => handleExport('summary')}>
+                                    <h4>📊 月間サマリー</h4>
+                                    <p>統計情報を含む月間サマリーをExcelで出力</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* リセット確認モーダル */}
+                    <div className={`modal ${showResetModal ? 'show' : ''}`} onClick={() => setShowResetModal(false)}>
+                        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                            <div className="modal-header">
+                                <h3>🔄 データリセット</h3>
+                                <button className="close-btn" onClick={() => setShowResetModal(false)}>×</button>
+                            </div>
+                            <div style={{marginBottom: '20px'}}>
+                                <p style={{color: '#666', marginBottom: '15px'}}>
+                                    全てのデータを初期状態に戻します。
+                                </p>
+                                <p style={{color: '#eb3349', fontWeight: 'bold'}}>
+                                    ⚠️ この操作は取り消せません
+                                </p>
+                            </div>
+                            <div style={{display: 'flex', gap: '10px', justifyContent: 'flex-end'}}>
+                                <button 
+                                    className="btn btn-secondary"
+                                    onClick={() => setShowResetModal(false)}
+                                >
+                                    キャンセル
+                                </button>
+                                <button 
+                                    className="btn btn-danger"
+                                    onClick={handleReset}
+                                >
+                                    リセット実行
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* トースト通知 */}
+                    {toast && <div className="toast">{toast}</div>}
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
